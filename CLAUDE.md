@@ -70,9 +70,11 @@ Release profile keeps overflow-checks on.
 - Initial scaffolding commits may be large. Everything after that: atomic — one logical change
   per commit, nothing unrelated riding along.
 
-## Domain decisions (documented in README too)
+## Domain decisions (full list: WCGW.md, cite by number)
 
 - Disputes apply to deposits AND withdrawals. Available may go negative — a dispute on funds
-  already spent is a visible liability, chargeback realizes the loss and locks the account.
-- Duplicate tx id on deposit/withdrawal → reject row (spec guarantees global uniqueness).
-- A locked account rejects every subsequent transaction.
+  already spent is a visible liability (WCGW #7).
+- Chargeback REVERSES its transaction: deposit chargeback removes funds (held↓ total↓),
+  withdrawal chargeback claws them back (held↓, available↑ total↑) (WCGW #8).
+- Duplicate tx id on deposit/withdrawal → reject row (WCGW #22).
+- A locked account rejects every subsequent transaction (WCGW #30).

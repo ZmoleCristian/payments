@@ -21,6 +21,7 @@ pub enum RowError {
 pub enum FatalError {
     Io(io::Error),
     Report(io::Error),
+    Corrupt(RowError),
 }
 
 impl Display for RowError {
@@ -48,6 +49,7 @@ impl Display for FatalError {
         match self {
             FatalError::Io(e) => write!(f, "io failure: {e}"),
             FatalError::Report(e) => write!(f, "report sink failure: {e}"),
+            FatalError::Corrupt(e) => write!(f, "corrupt ledger state: {e}"),
         }
     }
 }
@@ -57,5 +59,11 @@ impl Error for FatalError {}
 impl From<io::Error> for FatalError {
     fn from(e: io::Error) -> Self {
         FatalError::Io(e)
+    }
+}
+
+impl From<RowError> for FatalError {
+    fn from(e: RowError) -> Self {
+        FatalError::Corrupt(e)
     }
 }
