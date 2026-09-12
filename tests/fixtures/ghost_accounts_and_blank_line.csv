@@ -1,0 +1,5 @@
+type,client,tx,amount
+
+bogus,1,1,1
+dispute,7,999,
+withdrawal,8,1,5

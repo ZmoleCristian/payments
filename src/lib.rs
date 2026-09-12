@@ -5,6 +5,7 @@
 #![deny(unused_assignments)]
 
 pub mod config;
+pub mod csv;
 pub mod errors;
 pub mod models;
 pub mod parse;

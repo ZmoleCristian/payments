@@ -1,0 +1,3 @@
+type,client,tx,amount,note
+deposit,1,1,10.0,partner-debug
+withdrawal,1,2,3.0,

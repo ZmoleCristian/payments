@@ -2,10 +2,10 @@ use crate::errors::RowError;
 use crate::structs::money::Money;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
-pub const SCALE: i64 = 10_000;
-pub const SCALE_U64: u64 = 10_000;
-
 impl Money {
+    const SCALE_U64: u64 = 10_000;
+    const SCALE_U128: u128 = 10_000;
+
     pub fn parse(text: &str) -> Result<Money, RowError> {
         let mut units: i64 = 0;
         let mut frac_digits: usize = 0;
@@ -72,11 +72,16 @@ impl Money {
         self.0 == 0
     }
 
-    pub fn total_of(self, held: Money) -> Result<Money, RowError> {
-        let Some(total) = self.0.checked_add(held.0) else {
-            return Err(RowError::BadAmount);
-        };
-        Ok(Money(total))
+    pub fn total_text(self, held: Money) -> String {
+        let sum = i128::from(self.0) + i128::from(held.0);
+        if sum > i128::from(i64::MAX) || sum < i128::from(i64::MIN) {
+            return String::from("overflow");
+        }
+        let sign = if sum < 0 { "-" } else { "" };
+        let magnitude = sum.unsigned_abs();
+        let whole = magnitude.div_euclid(Self::SCALE_U128);
+        let frac = magnitude.rem_euclid(Self::SCALE_U128);
+        format!("{sign}{whole}.{frac:04}")
     }
 }
 
@@ -84,8 +89,8 @@ impl Display for Money {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let sign = if self.0 < 0 { "-" } else { "" };
         let magnitude = self.0.unsigned_abs();
-        let whole = magnitude.div_euclid(SCALE_U64);
-        let frac = magnitude.rem_euclid(SCALE_U64);
+        let whole = magnitude.div_euclid(Self::SCALE_U64);
+        let frac = magnitude.rem_euclid(Self::SCALE_U64);
         write!(f, "{sign}{whole}.{frac:04}")
     }
 }

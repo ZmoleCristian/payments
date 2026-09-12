@@ -27,20 +27,19 @@ impl Slot {
 }
 
 impl Columns {
-    pub fn parse_row(&self, line: &str) -> Result<Row, RowError> {
-        let fields: Vec<&str> = line.split(',').collect();
+    pub fn parse_row(&self, fields: &[Vec<u8>]) -> Result<Row, RowError> {
         if fields.len() != self.width {
             return Err(RowError::Malformed);
         }
-        let kind_text = field_at(&fields, self.kind)?;
-        let client_text = field_at(&fields, self.client)?;
-        let tx_text = field_at(&fields, self.tx)?;
-        let amount_text = field_at(&fields, self.amount)?;
+        let kind_text = field_at(fields, self.kind)?;
+        let client_text = field_at(fields, self.client)?;
+        let tx_text = field_at(fields, self.tx)?;
+        let amount_text = field_at(fields, self.amount)?;
         let kind = match kind_text.to_ascii_lowercase().as_str() {
             "deposit" => RowKind::Deposit { amount: Money::parse(amount_text)? },
             "withdrawal" => RowKind::Withdrawal { amount: Money::parse(amount_text)? },
             "dispute" | "resolve" | "chargeback" => no_amount_kind(kind_text, amount_text)?,
-            other => reject_type(other)?,
+            _ => return Err(RowError::UnknownType),
         };
         let client = parse_client(client_text)?;
         let tx = parse_tx(tx_text)?;
@@ -48,11 +47,16 @@ impl Columns {
     }
 }
 
-fn field_at<'a>(fields: &'a [&str], index: usize) -> Result<&'a str, RowError> {
-    match fields.get(index) {
-        Some(text) => Ok(text.trim()),
-        None => Err(RowError::Malformed),
-    }
+fn field_at(fields: &[Vec<u8>], index: usize) -> Result<&str, RowError> {
+    let raw = match fields.get(index) {
+        Some(bytes) => bytes,
+        None => return Err(RowError::Malformed),
+    };
+    let text = match std::str::from_utf8(raw) {
+        Ok(text) => text,
+        Err(bad) => return Err(RowError::BadClient(format!("invalid utf-8 at byte {}", bad.valid_up_to()))),
+    };
+    Ok(text.trim())
 }
 
 fn no_amount_kind(kind_text: &str, amount_text: &str) -> Result<RowKind, RowError> {
@@ -63,15 +67,8 @@ fn no_amount_kind(kind_text: &str, amount_text: &str) -> Result<RowKind, RowErro
         "dispute" => Ok(RowKind::Dispute),
         "resolve" => Ok(RowKind::Resolve),
         "chargeback" => Ok(RowKind::Chargeback),
-        other => reject_type(other),
+        _ => Err(RowError::UnknownType),
     }
-}
-
-fn reject_type(other: &str) -> Result<RowKind, RowError> {
-    if other.is_empty() {
-        return Err(RowError::UnknownType);
-    }
-    Err(RowError::UnknownType)
 }
 
 fn parse_client(text: &str) -> Result<ClientId, RowError> {

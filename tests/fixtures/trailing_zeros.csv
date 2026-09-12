@@ -1,0 +1,4 @@
+type,client,tx,amount
+deposit,1,1,1.50000
+deposit,2,2,1.00001
+deposit,3,3,2.5

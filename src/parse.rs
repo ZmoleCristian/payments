@@ -1,16 +1,20 @@
 use crate::errors::RowError;
 use crate::structs::columns::{Columns, Slot};
 
-pub fn parse_header(line: &str) -> Result<Columns, RowError> {
-    let line = line.trim_start_matches('\u{feff}');
+pub fn parse_header(fields: &[Vec<u8>]) -> Result<Columns, RowError> {
     let mut kind = Slot::empty();
     let mut client = Slot::empty();
     let mut tx = Slot::empty();
     let mut amount = Slot::empty();
     let mut width = 0;
-    for (index, raw) in line.split(',').enumerate() {
+    for (index, raw) in fields.iter().enumerate() {
         width = index + 1;
-        match raw.trim().to_ascii_lowercase().as_str() {
+        let text = match std::str::from_utf8(raw) {
+            Ok(text) => text,
+            Err(bad) => return Err(RowError::BadClient(format!("invalid utf-8 at byte {}", bad.valid_up_to()))),
+        };
+        let name = text.trim_start_matches('\u{feff}').trim().to_ascii_lowercase();
+        match name.as_str() {
             "type" => kind.claim(index)?,
             "client" => client.claim(index)?,
             "tx" => tx.claim(index)?,

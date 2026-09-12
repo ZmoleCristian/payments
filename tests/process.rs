@@ -45,7 +45,7 @@ fn wcgw39_output_sorted_by_client_for_determinism() {
 
 #[test]
 fn wcgw40_overlong_line_capped_drained_reported() {
-    let long_amount = "9".repeat(5000);
+    let long_amount = "9".repeat(70000);
     let input = format!("type,client,tx,amount\ndeposit,1,1,{long_amount}\ndeposit,2,2,2.0\n");
     let o = drive(&input).expect("run");
     assert!(o.stderr.contains("line 2: malformed row"), "stderr: {}", o.stderr);

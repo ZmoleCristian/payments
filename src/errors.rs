@@ -15,6 +15,7 @@ pub enum RowError {
     AlreadyDisputed,
     InsufficientFunds,
     AccountLocked,
+    WithdrawalDispute,
 }
 
 #[derive(Debug)]
@@ -23,6 +24,7 @@ pub enum FatalError {
     Report(io::Error),
     Corrupt(RowError),
     Header,
+    UnterminatedQuote,
 }
 
 impl Display for RowError {
@@ -39,6 +41,7 @@ impl Display for RowError {
             RowError::AlreadyDisputed => write!(f, "transaction already under dispute"),
             RowError::InsufficientFunds => write!(f, "insufficient funds"),
             RowError::AccountLocked => write!(f, "account locked"),
+            RowError::WithdrawalDispute => write!(f, "withdrawals cannot be disputed"),
         }
     }
 }
@@ -52,6 +55,7 @@ impl Display for FatalError {
             FatalError::Report(e) => write!(f, "report sink failure: {e}"),
             FatalError::Corrupt(e) => write!(f, "corrupt ledger state: {e}"),
             FatalError::Header => write!(f, "missing or invalid header: expected columns type,client,tx,amount in any order"),
+            FatalError::UnterminatedQuote => write!(f, "broken file: quoted field opened but never closed"),
         }
     }
 }

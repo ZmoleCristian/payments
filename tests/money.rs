@@ -51,9 +51,10 @@ fn wcgw7_dispute_on_spent_funds_shows_negative_available() {
 }
 
 #[test]
-fn wcgw8_withdrawal_chargeback_claws_back_to_pre_withdrawal_total() {
-    let o = drive("type,client,tx,amount\ndeposit,1,1,100\nwithdrawal,1,2,30\ndispute,1,2,\nchargeback,1,2,\n").expect("run");
-    assert_eq!(row_for(&o.stdout, 1), "1,100.0000,0.0000,100.0000,true");
+fn wcgw47_dispute_on_withdrawal_rejected() {
+    let o = drive("type,client,tx,amount\ndeposit,1,1,100\nwithdrawal,1,2,30\ndispute,1,2,\n").expect("run");
+    assert!(o.stderr.contains("line 4: withdrawals cannot be disputed"), "stderr: {}", o.stderr);
+    assert_eq!(row_for(&o.stdout, 1), "1,70.0000,0.0000,70.0000,false");
 }
 
 #[test]

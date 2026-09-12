@@ -95,6 +95,9 @@ impl Ledger {
     fn dispute(&mut self, client: ClientId, tx: TxId) -> Result<(), RowError> {
         let amount = {
             let record = self.own_tx(client, tx)?;
+            if record.kind == TxKind::Withdrawal {
+                return Err(RowError::WithdrawalDispute);
+            }
             if record.disputed {
                 return Err(RowError::AlreadyDisputed);
             }
@@ -118,6 +121,9 @@ impl Ledger {
     fn resolve(&mut self, client: ClientId, tx: TxId) -> Result<(), RowError> {
         let amount = {
             let record = self.own_tx(client, tx)?;
+            if record.kind == TxKind::Withdrawal {
+                return Err(RowError::WithdrawalDispute);
+            }
             if !record.disputed {
                 return Err(RowError::NotDisputed);
             }
@@ -136,22 +142,18 @@ impl Ledger {
     }
 
     fn chargeback(&mut self, client: ClientId, tx: TxId) -> Result<(), RowError> {
-        let (amount, kind) = {
+        let amount = {
             let record = self.own_tx(client, tx)?;
+            if record.kind == TxKind::Withdrawal {
+                return Err(RowError::WithdrawalDispute);
+            }
             if !record.disputed {
                 return Err(RowError::NotDisputed);
             }
-            (record.amount, record.kind)
+            record.amount
         };
         let account = self.account_for(client);
         account.held = account.held.checked_sub(amount)?;
-        match kind {
-            TxKind::Deposit => {}
-            TxKind::Withdrawal => {
-                account.available = account.available.checked_add(amount)?;
-                account.available = account.available.checked_add(amount)?;
-            }
-        }
         account.locked = true;
         match self.transactions.get_mut(&tx) {
             Some(record) => {
