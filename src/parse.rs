@@ -59,25 +59,19 @@ fn next_field<'a>(fields: &mut impl Iterator<Item = &'a str>) -> Result<&'a str,
 }
 
 fn parse_client(text: &str) -> Result<ClientId, RowError> {
-    let id = text.trim().parse::<u16>().map_err(reject_client)?;
-    Ok(ClientId(id))
-}
-
-fn reject_client(bad: std::num::ParseIntError) -> RowError {
-    if bad.to_string().is_empty() {
-        return RowError::BadClient;
+    match text.parse::<u16>() {
+        Ok(id) => Ok(ClientId(id)),
+        Err(bad) => Err(RowError::BadClient(evidence(text, bad))),
     }
-    RowError::BadClient
 }
 
 fn parse_tx(text: &str) -> Result<TxId, RowError> {
-    let id = text.trim().parse::<u32>().map_err(reject_tx)?;
-    Ok(TxId(id))
+    match text.parse::<u32>() {
+        Ok(id) => Ok(TxId(id)),
+        Err(bad) => Err(RowError::BadTx(evidence(text, bad))),
+    }
 }
 
-fn reject_tx(bad: std::num::ParseIntError) -> RowError {
-    if bad.to_string().is_empty() {
-        return RowError::BadTx;
-    }
-    RowError::BadTx
+fn evidence(text: &str, bad: std::num::ParseIntError) -> String {
+    format!("'{text}' ({bad})")
 }

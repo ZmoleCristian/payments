@@ -9,13 +9,6 @@ use crate::structs::transaction::{Transaction, TxKind};
 use std::collections::hash_map::Entry;
 
 impl Ledger {
-    pub fn new() -> Ledger {
-        Ledger {
-            accounts: std::collections::HashMap::new(),
-            transactions: std::collections::HashMap::new(),
-        }
-    }
-
     pub fn apply(&mut self, row: &Row) -> Result<(), RowError> {
         self.account_for(row.client);
         self.gate_locked(row.client)?;
@@ -41,7 +34,7 @@ impl Ledger {
     fn account_for(&mut self, client: ClientId) -> &mut Account {
         match self.accounts.entry(client) {
             Entry::Occupied(e) => e.into_mut(),
-            Entry::Vacant(e) => e.insert(Account::new()),
+            Entry::Vacant(e) => e.insert(Account::default()),
         }
     }
 
@@ -165,11 +158,5 @@ impl Ledger {
             None => return Err(RowError::UnknownTx),
         }
         Ok(())
-    }
-}
-
-impl Default for Ledger {
-    fn default() -> Self {
-        Self::new()
     }
 }

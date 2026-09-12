@@ -28,6 +28,14 @@ fn wcgw14_bom_stripped() {
 }
 
 #[test]
+fn wcgw11_bad_id_reports_evidence_text() {
+    let o = drive("type,client,tx,amount\ndeposit,,1,10\ndeposit,abc,2,10\ndeposit,3,,10\n").expect("run");
+    assert!(o.stderr.contains("line 2: invalid client id: '' (cannot parse integer from empty string)"), "stderr: {}", o.stderr);
+    assert!(o.stderr.contains("line 3: invalid client id: 'abc' (invalid digit found in string)"), "stderr: {}", o.stderr);
+    assert!(o.stderr.contains("line 4: invalid transaction id: '' (cannot parse integer from empty string)"), "stderr: {}", o.stderr);
+}
+
+#[test]
 fn wcgw15_blank_lines_skipped_silently() {
     let o = drive("type,client,tx,amount\n\n   \n\ndeposit,1,1,1.0\n\n").expect("run");
     assert_eq!(row_for(&o.stdout, 1), "1,1.0000,0.0000,1.0000,false");

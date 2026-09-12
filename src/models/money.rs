@@ -6,10 +6,6 @@ pub const SCALE: i64 = 10_000;
 pub const SCALE_U64: u64 = 10_000;
 
 impl Money {
-    pub fn zero() -> Money {
-        Money(0)
-    }
-
     pub fn parse(text: &str) -> Result<Money, RowError> {
         let mut units: i64 = 0;
         let mut frac_digits: usize = 0;

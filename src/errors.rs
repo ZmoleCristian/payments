@@ -6,8 +6,8 @@ use std::io;
 pub enum RowError {
     Malformed,
     UnknownType,
-    BadClient,
-    BadTx,
+    BadClient(String),
+    BadTx(String),
     BadAmount,
     DuplicateTx,
     UnknownTx,
@@ -29,8 +29,8 @@ impl Display for RowError {
         match self {
             RowError::Malformed => write!(f, "malformed row"),
             RowError::UnknownType => write!(f, "unknown transaction type"),
-            RowError::BadClient => write!(f, "invalid client id"),
-            RowError::BadTx => write!(f, "invalid transaction id"),
+            RowError::BadClient(text) => write!(f, "invalid client id: {text}"),
+            RowError::BadTx(text) => write!(f, "invalid transaction id: {text}"),
             RowError::BadAmount => write!(f, "invalid amount"),
             RowError::DuplicateTx => write!(f, "duplicate transaction id"),
             RowError::UnknownTx => write!(f, "unknown transaction id"),

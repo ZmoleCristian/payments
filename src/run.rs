@@ -6,7 +6,7 @@ use crate::structs::ledger::Ledger;
 use std::io::{BufRead, Read, Write};
 
 pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Write) -> Result<(), FatalError> {
-    let mut ledger = Ledger::new();
+    let mut ledger = Ledger::default();
     let mut line_no: u64 = 0;
     let mut first_data = true;
     loop {
