@@ -67,9 +67,3 @@ impl From<io::Error> for FatalError {
         FatalError::Io(e)
     }
 }
-
-impl From<RowError> for FatalError {
-    fn from(e: RowError) -> Self {
-        FatalError::Corrupt(e)
-    }
-}

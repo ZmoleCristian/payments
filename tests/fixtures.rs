@@ -172,6 +172,11 @@ fn record_cap_inside_open_quote_drains_whole_record_wcgw40() {
 }
 
 #[test]
+fn record_cap_then_eof_inside_quote_is_broken_file_wcgw50() {
+    run_fixture("cap_then_eof_in_quote.csv").expect("run").fatal_unterminated();
+}
+
+#[test]
 fn dispute_on_withdrawal_rejected_wcgw47() {
     run_fixture("dispute_withdrawal.csv")
         .expect("run")
@@ -194,6 +199,11 @@ fn dispute_missing_trailing_comma_is_malformed() {
 #[test]
 fn duplicate_header_column_is_fatal() {
     run_fixture("dup_column.csv").expect("run").fatal();
+}
+
+#[test]
+fn header_missing_a_column_is_fatal_wcgw46() {
+    run_fixture("missing_column.csv").expect("run").fatal();
 }
 
 #[test]
