@@ -4,9 +4,10 @@
 #![deny(unused_variables)]
 #![deny(unused_assignments)]
 
+use payments::errors::FatalError;
 use payments::run::run;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
+use std::io::{BufReader, BufWriter, ErrorKind, Write};
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
@@ -36,10 +37,12 @@ fn open_and_run(path: &str) -> ExitCode {
     let flushed = out.flush();
     match (result, flushed) {
         (Ok(()), Ok(())) => ExitCode::SUCCESS,
+        (Err(FatalError::Io(io)), _) if io.kind() == ErrorKind::BrokenPipe => std::process::exit(0),
         (Err(e), _) => {
             eprintln!("{e}");
             std::process::exit(1)
         }
+        (Ok(()), Err(e)) if e.kind() == ErrorKind::BrokenPipe => std::process::exit(0),
         (Ok(()), Err(e)) => {
             eprintln!("output flush failed: {e}");
             std::process::exit(1)

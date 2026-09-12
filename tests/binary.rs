@@ -51,6 +51,26 @@ fn binary_processes_file_to_stdout() {
 }
 
 #[test]
+fn binary_reader_leaving_early_is_not_our_failure_wcgw34() {
+    let mut wide = String::from("type,client,tx,amount\n");
+    for i in 0..20000 {
+        wide.push_str(&format!("deposit,{},{i},1.0\n", i % 65536));
+    }
+    let csv = temp_csv("broken-pipe.csv", &wide).expect("temp csv");
+    let path = csv.to_str().expect("utf8 path");
+    let mut child = Command::new(binary_path().expect("binary")).arg(path).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().expect("spawn");
+    match child.stdout.take() {
+        Some(pipe) => drop(pipe),
+        None => panic!("stdout pipe missing"),
+    }
+    let output = child.wait_with_output().expect("wait");
+    std::fs::remove_file(&csv).expect("cleanup");
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert_eq!(output.status.code().unwrap_or(-1), 0, "reader leaving is exit 0, stderr: {stderr}");
+    assert!(!stderr.contains("Broken pipe"), "no complaint about the reader: {stderr}");
+}
+
+#[test]
 fn binary_missing_file_exits_nonzero_with_message() {
     let (code, stdout, stderr) = run_binary(&["/nonexistent/path/to/nowhere.csv"], "").expect("run binary");
     assert_eq!(code, 1, "exit code");
