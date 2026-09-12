@@ -9,9 +9,62 @@ fn wcgw11_spaced_header_detected() {
 }
 
 #[test]
-fn wcgw12_headerless_file_first_row_is_data() {
-    let o = drive("deposit, 7, 9, 3.25\n").expect("run");
-    assert_eq!(row_for(&o.stdout, 7), "7,3.2500,0.0000,3.2500,false");
+fn wcgw12_no_header_no_file() {
+    let result = drive("deposit, 7, 9, 3.25\n");
+    match result {
+        Ok(o) => panic!("headerless file must be fatal, got stdout: {}", o.stdout),
+        Err(e) => {
+            let text = format!("{e}");
+            assert!(text.contains("missing or invalid header"), "error: {text}");
+        }
+    }
+}
+
+#[test]
+fn wcgw46_header_names_columns_any_order() {
+    let o = drive("type,tx,client,amount\ndeposit,1,7,100\n").expect("run");
+    assert_eq!(row_for(&o.stdout, 7), "7,100.0000,0.0000,100.0000,false", "header order drives parsing");
+    assert!(o.stderr.is_empty(), "stderr: {}", o.stderr);
+}
+
+#[test]
+fn wcgw46_header_unknown_column_is_fatal() {
+    let result = drive("type,client,tx,currency\ndeposit,1,1,100\n");
+    match result {
+        Ok(o) => panic!("unknown column must be fatal, got stdout: {}", o.stdout),
+        Err(e) => assert!(format!("{e}").contains("missing or invalid header"), "error: {e}"),
+    }
+}
+
+#[test]
+fn wcgw46_header_duplicate_column_is_fatal() {
+    let result = drive("type,client,tx,client\ndeposit,1,1,100\n");
+    match result {
+        Ok(o) => panic!("duplicate column must be fatal, got stdout: {}", o.stdout),
+        Err(e) => assert!(format!("{e}").contains("missing or invalid header"), "error: {e}"),
+    }
+}
+
+#[test]
+fn wcgw46_header_missing_column_is_fatal() {
+    let result = drive("type,client,tx\ndeposit,1,1,100\n");
+    match result {
+        Ok(o) => panic!("missing amount column must be fatal, got stdout: {}", o.stdout),
+        Err(e) => assert!(format!("{e}").contains("missing or invalid header"), "error: {e}"),
+    }
+}
+
+#[test]
+fn wcgw46_empty_file_is_valid_zero_clients() {
+    let o = drive("").expect("run");
+    assert_eq!(o.stdout, "client,available,held,total,locked\n", "empty file emits bare header");
+    assert!(o.stderr.is_empty(), "stderr: {}", o.stderr);
+}
+
+#[test]
+fn wcgw46_header_case_insensitive() {
+    let o = drive("TYPE,Client,tx,Amount\ndeposit,1,7,100\n").expect("run");
+    assert_eq!(row_for(&o.stdout, 1), "1,100.0000,0.0000,100.0000,false");
 }
 
 #[test]

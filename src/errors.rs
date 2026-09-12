@@ -22,6 +22,7 @@ pub enum FatalError {
     Io(io::Error),
     Report(io::Error),
     Corrupt(RowError),
+    Header,
 }
 
 impl Display for RowError {
@@ -50,6 +51,7 @@ impl Display for FatalError {
             FatalError::Io(e) => write!(f, "io failure: {e}"),
             FatalError::Report(e) => write!(f, "report sink failure: {e}"),
             FatalError::Corrupt(e) => write!(f, "corrupt ledger state: {e}"),
+            FatalError::Header => write!(f, "missing or invalid header: expected columns type,client,tx,amount in any order"),
         }
     }
 }

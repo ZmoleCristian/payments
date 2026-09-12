@@ -1,14 +1,15 @@
 use crate::config::{MAX_LINE_BYTES, MAX_LINE_BYTES_U64};
 use crate::errors::{FatalError, RowError};
-use crate::parse::{is_header, parse_row};
+use crate::parse::parse_header;
 use crate::render::render;
+use crate::structs::columns::Columns;
 use crate::structs::ledger::Ledger;
 use std::io::{BufRead, Read, Write};
 
 pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Write) -> Result<(), FatalError> {
     let mut ledger = Ledger::default();
     let mut line_no: u64 = 0;
-    let mut first_data = true;
+    let mut columns: Option<Columns> = None;
     loop {
         let mut raw: Vec<u8> = Vec::new();
         let read = {
@@ -35,13 +36,14 @@ pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Writ
         if line.trim().is_empty() {
             continue;
         }
-        if first_data {
-            first_data = false;
-            if is_header(line) {
+        let active = match columns {
+            Some(ref cols) => cols,
+            None => {
+                columns = Some(parse_header(line).map_err(bad_header)?);
                 continue;
             }
-        }
-        match parse_row(line) {
+        };
+        match active.parse_row(line) {
             Ok(row) => match ledger.apply(&row) {
                 Ok(()) => {}
                 Err(e) => report_line(report, line_no, e)?,
@@ -51,6 +53,13 @@ pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Writ
     }
     render(&ledger, out)?;
     Ok(())
+}
+
+fn bad_header(bad: RowError) -> FatalError {
+    match bad {
+        RowError::Malformed => FatalError::Header,
+        other => FatalError::Corrupt(other),
+    }
 }
 
 fn report_bad_bytes(report: &mut impl Write, line_no: u64, bad: &std::string::FromUtf8Error) -> Result<(), FatalError> {

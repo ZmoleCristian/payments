@@ -18,8 +18,8 @@ append only, never renumber. [d] = decided, [o] = open.
 
 ## Input
 
-11. Header may have spaces ("type, client, tx, amount") — detect by trimmed fields, never by raw line. [d]
-12. No header at all — first row is data unless its trimmed type field literally reads "type". [d]
+11. Header may have spaces ("type, client, tx, amount") — fields are matched trimmed, never raw. [d]
+12. No header, no file — a non-empty input whose first row isn't a valid header is FatalError::Header, exit 1. An EMPTY file is zero clients, not a broken one: bare header out, exit 0. Headers are MANDATORY for data and DRIVE column mapping (see 46). [d]
 13. CRLF files — strip trailing \r after \n or every last field is poisoned. [d]
 14. UTF-8 BOM at file start — strip it or the header never matches. [d]
 15. Blank/whitespace-only lines — skipped silently, not errors, no report line. [d]
@@ -62,3 +62,4 @@ append only, never renumber. [d] = decided, [o] = open.
 43. A chargebacked tx id is burned forever — the record stays as a tombstone (burned=true) so any later deposit/withdrawal reusing the id is DuplicateTx, and any dispute/resolve/chargeback naming it is UnknownTx. Evicting it would reopen the id to reuse exactly where fraud cleanup happened. [d]
 44. Any well-formed row (one that parses) names its client — the account is created on sight, so a rejected duplicate deposit or a failed withdrawal still yields a zero row in the output. A malformed row names nobody. [d]
 45. Locked is absolute: every later row for the account is AccountLocked, including resolve/chargeback on disputes still open at lock time — their held funds stay held forever, by design. A locked account may thus report held > 0 with no exit path. [d]
+46. The header names the columns and is honored in ANY order, case-insensitively — TYPE,tx,Client,Amount is the same header. Unknown, duplicate, or missing columns are FatalError::Header. A positional parser would silently misbook funds on reordered partners; this is the fraud-adjacent sloppiness the engine exists to catch. [d]
