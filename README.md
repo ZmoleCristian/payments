@@ -24,6 +24,8 @@ cargo test                 # 104 tests
 
 ## Calls the spec does not make
 
+The exercise text is not in this repo, so "the spec" below is cited, not shipped.
+
 The spec is silent on each of these. Every one is a deliberate ruling, numbered
 in WCGW.md, and pinned by the named test.
 
