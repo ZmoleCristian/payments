@@ -6,10 +6,10 @@ append only, never renumber. [d] = decided, [o] = open.
 ## Money
 
 1. Money is never f32/f64 — 0.1 has no exact binary form; i64 scaled by 10_000 is the only representation. [d]
-2. More than 4 decimal places (1.00005) is a partner error, not a rounding invitation — reject the row. [d]
+2. More than 4 decimal places is fine IFF every digit past the 4th is zero (1.50000 = 1.5, partner padding); any nonzero digit past the 4th is unrepresentable — reject the row, never round. [d]
 3. A huge digit string overflows i64 before the number is finished — parse bails on the first digit that can't fit. [d]
 4. Signed amounts (-5.0, +1.0) are malformed; a negative deposit is a withdrawal in costume. [d]
-5. Zero-amount rows are legal noise — accept, record the tx (it can still be disputed later). [d]
+5. Zero-amount rows are legal noise — accept, record the tx. But DISPUTING a zero tx is rejected (BadAmount): holding nothing is nonsense, and a chargeback of nothing would lock an account over 0.0000. [d]
 6. Absurd sequences overflow i64 mid-run (deposit 9e14 twice) — checked math makes it a RowError, never wraparound. [d]
 7. Disputing funds already spent pushes available negative — the liability stays visible and total = available + held still holds. [d]
 8. A chargeback REVERSES its transaction: on a deposit, held and total decrease (funds vanish); on a withdrawal, held decreases and available/total increase (funds clawed back). Same math both ways hands a fraudster free money — 100 deposit, 30 withdraw, dispute, chargeback must end at total 100, not 40. [d]
@@ -38,8 +38,8 @@ append only, never renumber. [d] = decided, [o] = open.
 25. Double dispute on one tx — AlreadyDisputed, rejected. [d]
 26. Resolve or chargeback on a tx not under dispute — NotDisputed, rejected. [d]
 27. Re-dispute after resolve — allowed; resolve returns the tx to plain state and the machine is symmetric. [d]
-28. Dispute/resolve/chargeback carrying a non-empty amount field — the field is ignored, spec leaves it blank. [d]
-29. Type strings are exact lowercase — "Deposit" is UnknownType. [d]
+28. Dispute/resolve/chargeback must carry an EMPTY amount field — the tx record is the only source of truth for the amount. A row that states one (chargeback of 1000 on a 100 deposit) is a lie on its face: Malformed, rejected, the genuine dispute untouched. [d]
+29. Type strings are case-insensitive — "Deposit" is a deposit, same partner-sloppiness class as header casing (46). [d]
 30. Every row after an account locks is rejected (deposits included), each earning its own report line. [d]
 31. A dispute naming a tx that appears later in the file is UnknownTx at that moment — chronology is the file's promise, not ours to repair. [d]
 

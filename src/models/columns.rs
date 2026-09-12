@@ -36,10 +36,10 @@ impl Columns {
         let client_text = field_at(&fields, self.client)?;
         let tx_text = field_at(&fields, self.tx)?;
         let amount_text = field_at(&fields, self.amount)?;
-        let kind = match kind_text {
+        let kind = match kind_text.to_ascii_lowercase().as_str() {
             "deposit" => RowKind::Deposit { amount: Money::parse(amount_text)? },
             "withdrawal" => RowKind::Withdrawal { amount: Money::parse(amount_text)? },
-            "dispute" | "resolve" | "chargeback" => no_amount_kind(kind_text)?,
+            "dispute" | "resolve" | "chargeback" => no_amount_kind(kind_text, amount_text)?,
             other => reject_type(other)?,
         };
         let client = parse_client(client_text)?;
@@ -55,8 +55,11 @@ fn field_at<'a>(fields: &'a [&str], index: usize) -> Result<&'a str, RowError> {
     }
 }
 
-fn no_amount_kind(kind_text: &str) -> Result<RowKind, RowError> {
-    match kind_text {
+fn no_amount_kind(kind_text: &str, amount_text: &str) -> Result<RowKind, RowError> {
+    if !amount_text.is_empty() {
+        return Err(RowError::Malformed);
+    }
+    match kind_text.to_ascii_lowercase().as_str() {
         "dispute" => Ok(RowKind::Dispute),
         "resolve" => Ok(RowKind::Resolve),
         "chargeback" => Ok(RowKind::Chargeback),

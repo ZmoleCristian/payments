@@ -98,6 +98,9 @@ impl Ledger {
             if record.disputed {
                 return Err(RowError::AlreadyDisputed);
             }
+            if record.amount.is_zero() {
+                return Err(RowError::BadAmount);
+            }
             record.amount
         };
         let account = self.account_for(client);

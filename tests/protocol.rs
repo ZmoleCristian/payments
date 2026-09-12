@@ -75,15 +75,17 @@ fn wcgw27_redispute_after_resolve_allowed() {
 }
 
 #[test]
-fn wcgw28_amount_on_dispute_row_ignored() {
+fn wcgw28_amount_on_dispute_row_is_malformed() {
     let o = drive("type,client,tx,amount\ndeposit,1,1,10\ndispute,1,1,999\n").expect("run");
-    assert_eq!(row_for(&o.stdout, 1), "1,0.0000,10.0000,10.0000,false");
+    assert!(o.stderr.contains("line 3: malformed row"), "a lying amount field is not ignored: {}", o.stderr);
+    assert_eq!(row_for(&o.stdout, 1), "1,10.0000,0.0000,10.0000,false", "no dispute happened");
 }
 
 #[test]
-fn wcgw29_type_case_sensitive() {
-    let o = drive("type,client,tx,amount\nDeposit,1,1,10\n").expect("run");
-    assert!(o.stderr.contains("line 2: unknown transaction type"), "stderr: {}", o.stderr);
+fn wcgw29_type_case_insensitive() {
+    let o = drive("type,client,tx,amount\nDeposit,1,1,10\nWITHDRAWAL,1,2,4\n").expect("run");
+    assert!(o.stderr.is_empty(), "casing is partner noise: {}", o.stderr);
+    assert_eq!(row_for(&o.stdout, 1), "1,6.0000,0.0000,6.0000,false");
 }
 
 #[test]

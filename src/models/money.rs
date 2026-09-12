@@ -25,7 +25,11 @@ impl Money {
             if seen_dot {
                 frac_digits += 1;
                 if frac_digits > 4 {
-                    return Err(RowError::BadAmount);
+                    if digit != 0 {
+                        return Err(RowError::BadAmount);
+                    }
+                    seen_digit = true;
+                    continue;
                 }
             }
             let Some(next) = units.checked_mul(10).and_then(|u| u.checked_add(i64::from(digit))) else {
@@ -62,6 +66,10 @@ impl Money {
 
     pub fn sufficient(self, cost: Money) -> bool {
         self.0 >= cost.0
+    }
+
+    pub fn is_zero(self) -> bool {
+        self.0 == 0
     }
 
     pub fn total_of(self, held: Money) -> Result<Money, RowError> {
