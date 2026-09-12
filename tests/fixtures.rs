@@ -136,10 +136,10 @@ fn quoted_fields_parse_as_real_csv() {
         .expect("run")
         .ok()
         .report(3, "malformed row")
-        .report(5, "malformed row")
-        .no_row(3)
+        .no_report(5)
         .row(1, "1,10.0000,0.0000,10.0000,false")
-        .row(2, "2,1.0000,0.0000,1.0000,false");
+        .row(2, "2,1.0000,0.0000,1.0000,false")
+        .row(3, "3,2.0000,0.0000,2.0000,false");
 }
 
 #[test]
@@ -148,12 +148,14 @@ fn quote_must_wrap_the_whole_field_wcgw52() {
         .expect("run")
         .ok()
         .report(3, "invalid amount")
-        .report(4, "malformed row")
-        .report(5, "malformed row")
+        .report(6, "malformed row")
+        .no_report(4)
+        .no_report(5)
         .no_row(2)
-        .no_row(3)
-        .no_row(4)
+        .no_row(6)
         .row(1, "1,10.0000,0.0000,10.0000,false")
+        .row(3, "3,2.0000,0.0000,2.0000,false")
+        .row(4, "4,1.0000,0.0000,1.0000,false")
         .row(5, "5,7.0000,0.0000,7.0000,false");
 }
 
@@ -266,17 +268,17 @@ fn dispute_held_overflow_rejected_row_survives() {
     run_fixture("half_applied_dispute_i64_14digit.csv")
         .expect("run")
         .ok()
-        .report(21, "invalid amount")
+        .report(20, "invalid amount")
         .row(1, "1,0.0000,899999999999999.9991,899999999999999.9991,false");
 }
 
 #[test]
-fn total_overflow_rejects_deposit_leaving_no_trace() {
+fn rejected_dispute_moves_no_money() {
     run_fixture("half_applied_hold_i64.csv")
         .expect("run")
         .ok()
         .report(6, "invalid amount")
-        .row(1, "1,-922337203685477.5807,922337203685477.5807,0.0000,false");
+        .row(1, "1,-922337203685477.5806,922337203685477.5807,0.0001,false");
 }
 
 #[test]
@@ -408,22 +410,22 @@ fn huge_amounts_rejected_other_clients_unaffected() {
 }
 
 #[test]
-fn stacked_disputes_fit_i64_render_overflow_wcgw51() {
+fn stacked_disputes_cannot_exceed_representable_total_wcgw51() {
     run_fixture("sum_overflow_i64_14digit.csv")
         .expect("run")
         .ok()
-        .clean()
-        .row(1, "1,899999999999999.9991,899999999999999.9991,overflow,false")
+        .report(28, "invalid amount")
+        .row(1, "1,0.0000,899999999999999.9991,899999999999999.9991,false")
         .row(2, "2,5.0000,0.0000,5.0000,false");
 }
 
 #[test]
-fn dispute_at_i64_max_stacked_total_overflows_wcgw51() {
+fn dispute_at_i64_max_rejects_unrepresentable_total_wcgw51() {
     run_fixture("sum_overflow_i64.csv")
         .expect("run")
         .ok()
-        .clean()
-        .row(1, "1,922337203685477.5807,922337203685477.5807,overflow,false")
+        .report(4, "invalid amount")
+        .row(1, "1,0.0000,922337203685477.5807,922337203685477.5807,false")
         .row(2, "2,5.0000,0.0000,5.0000,false");
 }
 

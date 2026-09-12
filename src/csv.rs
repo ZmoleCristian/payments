@@ -196,7 +196,7 @@ fn step_closed(st: &mut State, b: u8) -> Step {
             st.line += 1;
             Step::Ended
         }
-        b'\r' => Step::More,
+        b'\r' | b' ' => Step::More,
         _ => Step::Bad,
     }
 }
@@ -218,6 +218,7 @@ fn step_bare(st: &mut State, b: u8) -> Step {
         }
         b'\n' => newline(st),
         b'\r' => Step::More,
+        b' ' if st.field_start => Step::More,
         _ => {
             st.field.push(b);
             st.field_start = false;

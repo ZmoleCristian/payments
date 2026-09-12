@@ -56,7 +56,9 @@ impl Ledger {
             return Err(RowError::DuplicateTx);
         }
         let account = self.account_for(client);
-        account.available = account.available.checked_add(amount)?;
+        let available = account.available.checked_add(amount)?;
+        available.checked_total(account.held)?;
+        account.available = available;
         self.transactions.insert(
             tx,
             Transaction {
@@ -107,8 +109,11 @@ impl Ledger {
             record.amount
         };
         let account = self.account_for(client);
-        account.available = account.available.checked_sub(amount)?;
-        account.held = account.held.checked_add(amount)?;
+        let available = account.available.checked_sub(amount)?;
+        let held = account.held.checked_add(amount)?;
+        available.checked_total(held)?;
+        account.available = available;
+        account.held = held;
         match self.transactions.get_mut(&tx) {
             Some(record) => {
                 record.disputed = true;
@@ -130,8 +135,11 @@ impl Ledger {
             record.amount
         };
         let account = self.account_for(client);
-        account.held = account.held.checked_sub(amount)?;
-        account.available = account.available.checked_add(amount)?;
+        let held = account.held.checked_sub(amount)?;
+        let available = account.available.checked_add(amount)?;
+        available.checked_total(held)?;
+        account.held = held;
+        account.available = available;
         match self.transactions.get_mut(&tx) {
             Some(record) => {
                 record.disputed = false;

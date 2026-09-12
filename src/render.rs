@@ -10,7 +10,7 @@ pub fn render(ledger: &Ledger, out: &mut impl Write) -> Result<(), FatalError> {
     clients.sort_by_key(|entry| entry.0 .0);
     let mut buf = String::from(OUTPUT_HEADER);
     for (id, account) in clients {
-        let total = account.available.total_text(account.held);
+        let total = account.available.checked_total(account.held).map_err(FatalError::Corrupt)?;
         buf.push_str(&format!("{},{},{},{},{}\n", id.0, account.available, account.held, total, account.locked));
     }
     out.write_all(buf.as_bytes())?;
