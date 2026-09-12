@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9dd136844414455803e370d114b0bfeebda47549f3e340f0c91b5dcfaee3f0b7 # shrinks to ops = [Deposit { client: 2, tx: 0, amount: 9223372036854775807 }, Withdrawal { client: 2, tx: 3, amount: 1 }, Dispute { client: 2, tx: 3 }]

@@ -1,0 +1,36 @@
+[package]
+name = "payments-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.payments]
+path = ".."
+
+[[bin]]
+name = "pipeline"
+path = "fuzz_targets/pipeline.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "money"
+path = "fuzz_targets/money.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "oracle"
+path = "fuzz_targets/oracle.rs"
+test = false
+doc = false
+bench = false

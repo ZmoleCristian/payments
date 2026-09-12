@@ -27,3 +27,7 @@ integer_division = "deny"
 as_conversions = "deny"
 disallowed_types = "deny"
 indexing_slicing = "deny"
+
+[dev-dependencies]
+allocation-counter = "0.8.1"
+proptest = "1.11.0"
