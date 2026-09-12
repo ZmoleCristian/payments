@@ -50,6 +50,41 @@ fn binary_processes_file_to_stdout() {
     assert!(stdout.contains("2,2.0000,0.0000,2.0000,false"), "client 2: {stdout}");
 }
 
+fn run_to_dev_full(name: &str, csv_text: &str) -> Io<(i32, String)> {
+    let csv = temp_csv(name, csv_text)?;
+    let path = match csv.to_str() {
+        Some(path) => path,
+        None => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "non utf-8 temp path")),
+    };
+    let full = std::fs::OpenOptions::new().write(true).open("/dev/full")?;
+    let output = Command::new(binary_path()?).arg(path).stdout(Stdio::from(full)).stderr(Stdio::piped()).output()?;
+    std::fs::remove_file(&csv)?;
+    let code = output.status.code().unwrap_or(-1);
+    let stderr = String::from_utf8(output.stderr).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    Ok((code, stderr))
+}
+
+#[test]
+fn binary_full_device_at_final_flush_is_fatal_wcgw34() {
+    let small = "type,client,tx,amount\ndeposit,1,1,1.0\ndeposit,2,2,2.0\n";
+    let (code, stderr) = run_to_dev_full("dev-full-small.csv", small).expect("run binary");
+    assert_eq!(code, 1, "a full device is our failure, stderr: {stderr}");
+    assert!(stderr.contains("output flush failed"), "names the flush: {stderr}");
+    assert!(stderr.contains("No space left on device"), "names the cause: {stderr}");
+}
+
+#[test]
+fn binary_full_device_mid_render_is_fatal_wcgw34() {
+    let mut wide = String::from("type,client,tx,amount\n");
+    for i in 0..20000 {
+        wide.push_str(&format!("deposit,{},{i},1.0\n", i % 65536));
+    }
+    let (code, stderr) = run_to_dev_full("dev-full-large.csv", &wide).expect("run binary");
+    assert_eq!(code, 1, "a full device is our failure, stderr: {stderr}");
+    assert!(stderr.contains("io failure"), "names the io failure: {stderr}");
+    assert!(stderr.contains("No space left on device"), "names the cause: {stderr}");
+}
+
 #[test]
 fn binary_reader_leaving_early_is_not_our_failure_wcgw34() {
     let mut wide = String::from("type,client,tx,amount\n");
