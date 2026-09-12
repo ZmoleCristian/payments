@@ -73,10 +73,15 @@ guard_types = ["MutexGuard", "RwLockReadGuard", "RwLockWriteGuard"]
 # not the absence of one. every target must itself be a declared key, and the map is only worth
 # writing as a DAG: two layers listing each other declares a cycle legal, which is the one thing
 # this rule exists to prevent.
-# structs = []
-# models = ["structs"]
-# routines = ["structs", "models"]
-# routes = ["structs", "routines"]
+config = []
+errors = []
+structs = []
+models = ["structs", "errors"]
+csv = ["structs", "errors", "config"]
+parse = ["structs", "errors"]
+render = ["structs", "errors", "config"]
+run = ["structs", "errors", "csv", "parse", "render"]
+main = ["errors", "run"]
 
 [rules]
 # rule ids switched off globally. default: none, and this is the loudest thing you can write in
