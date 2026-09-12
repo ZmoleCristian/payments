@@ -17,10 +17,7 @@ impl Ledger {
     }
 
     pub fn apply(&mut self, row: &Row) -> Result<(), RowError> {
-        let account = self.account_for(row.client);
-        if account.locked {
-            return Err(RowError::AccountLocked);
-        }
+        self.gate_locked(row.client)?;
         match row.kind {
             RowKind::Deposit { amount } => self.deposit(row.client, row.tx, amount),
             RowKind::Withdrawal { amount } => self.withdraw(row.client, row.tx, amount),
@@ -28,6 +25,16 @@ impl Ledger {
             RowKind::Resolve => self.resolve(row.client, row.tx),
             RowKind::Chargeback => self.chargeback(row.client, row.tx),
         }
+    }
+
+    fn gate_locked(&self, client: ClientId) -> Result<(), RowError> {
+        let Some(account) = self.accounts.get(&client) else {
+            return Ok(());
+        };
+        if account.locked {
+            return Err(RowError::AccountLocked);
+        }
+        Ok(())
     }
 
     fn account_for(&mut self, client: ClientId) -> &mut Account {

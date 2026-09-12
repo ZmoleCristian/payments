@@ -1,28 +1,30 @@
-use crate::config::MAX_LINE_BYTES;
+use crate::config::{MAX_LINE_BYTES, MAX_LINE_BYTES_U64};
 use crate::errors::{FatalError, RowError};
 use crate::parse::{is_header, parse_row};
 use crate::render::render;
 use crate::structs::ledger::Ledger;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Write};
 
 pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Write) -> Result<(), FatalError> {
     let mut ledger = Ledger::new();
-    let mut raw: Vec<u8> = Vec::new();
     let mut line_no: u64 = 0;
     let mut first_data = true;
     loop {
-        raw.clear();
-        let n = input.read_until(b'\n', &mut raw)?;
-        if n == 0 {
+        let mut raw: Vec<u8> = Vec::new();
+        let read = {
+            let mut capped = input.by_ref().take(MAX_LINE_BYTES_U64 + 1);
+            capped.read_until(b'\n', &mut raw)?
+        };
+        if read == 0 {
             break;
         }
         line_no += 1;
-        if raw.len() >= MAX_LINE_BYTES && !ends_newline(&raw) {
+        if raw.len() > MAX_LINE_BYTES {
             drain_line(&mut input)?;
             report_line(report, line_no, RowError::Malformed)?;
             continue;
         }
-        let text = match String::from_utf8(raw.clone()) {
+        let text = match String::from_utf8(raw) {
             Ok(text) => text,
             Err(bad) => {
                 report_bad_bytes(report, line_no, &bad)?;
@@ -49,13 +51,6 @@ pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Writ
     }
     render(&ledger, out)?;
     Ok(())
-}
-
-fn ends_newline(raw: &[u8]) -> bool {
-    let Some(last) = raw.last() else {
-        return false;
-    };
-    *last == b'\n'
 }
 
 fn report_bad_bytes(report: &mut impl Write, line_no: u64, bad: &std::string::FromUtf8Error) -> Result<(), FatalError> {
