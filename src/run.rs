@@ -5,20 +5,23 @@ use crate::render::render;
 use crate::structs::columns::Columns;
 use crate::structs::ledger::Ledger;
 use crate::structs::record::Record;
+use crate::structs::scan::Scan;
 use std::io::{BufRead, Write};
 
 pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Write) -> Result<(), FatalError> {
     let mut ledger = Ledger::default();
+    let mut record = Record::default();
+    let mut scan = Scan::default();
     let mut next_line: u64 = 1;
     let mut columns: Option<Columns> = None;
     loop {
-        match next_record(&mut input, next_line)? {
+        match next_record(&mut input, &mut record, &mut scan, next_line)? {
             Read::Done => break,
             Read::Malformed { first_line, last_line, error } => {
                 next_line = last_line + 1;
                 report_span(report, first_line, last_line, error)?;
             }
-            Read::Row(record) => {
+            Read::Row => {
                 next_line = record.last_line + 1;
                 handle(&mut ledger, &mut columns, &record, report)?;
             }
@@ -29,13 +32,13 @@ pub fn run(mut input: impl BufRead, out: &mut impl Write, report: &mut impl Writ
 }
 
 fn handle(ledger: &mut Ledger, columns: &mut Option<Columns>, record: &Record, report: &mut impl Write) -> Result<(), FatalError> {
-    if record.fields.len() == 1 && field_blank(&record.fields) {
+    if record.width == 1 && record.bytes.is_empty() {
         return Ok(());
     }
     match columns {
         Some(cols) => apply_row(ledger, cols, record, report),
         None => {
-            let cols = parse_header(&record.fields).map_err(bad_header)?;
+            let cols = parse_header(record).map_err(bad_header)?;
             *columns = Some(cols);
             Ok(())
         }
@@ -43,7 +46,7 @@ fn handle(ledger: &mut Ledger, columns: &mut Option<Columns>, record: &Record, r
 }
 
 fn apply_row(ledger: &mut Ledger, cols: &Columns, record: &Record, report: &mut impl Write) -> Result<(), FatalError> {
-    let row = match cols.parse_row(&record.fields) {
+    let row = match cols.parse_row(record) {
         Ok(row) => row,
         Err(e) => {
             report_span(report, record.first_line, record.last_line, e)?;
@@ -58,18 +61,6 @@ fn apply_row(ledger: &mut Ledger, cols: &Columns, record: &Record, report: &mut 
         }
     }
     Ok(())
-}
-
-fn field_blank(fields: &[Vec<u8>]) -> bool {
-    let mut blank = true;
-    for bytes in fields {
-        for b in bytes {
-            if !b.is_ascii_whitespace() {
-                blank = false;
-            }
-        }
-    }
-    blank
 }
 
 fn bad_header(bad: RowError) -> FatalError {

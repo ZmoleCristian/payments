@@ -2,6 +2,7 @@ use crate::errors::RowError;
 use crate::structs::columns::{Columns, Slot};
 use crate::structs::ids::{ClientId, TxId};
 use crate::structs::money::Money;
+use crate::structs::record::{FieldError, Record};
 use crate::structs::row::{Row, RowKind};
 
 impl Slot {
@@ -27,30 +28,44 @@ impl Slot {
 }
 
 impl Columns {
-    pub fn parse_row(&self, fields: &[Vec<u8>]) -> Result<Row, RowError> {
-        if fields.len() != self.width {
+    pub fn parse_row(&self, record: &Record) -> Result<Row, RowError> {
+        if record.width != self.width {
             return Err(RowError::Malformed);
         }
-        let kind_text = field_at(fields, self.kind)?;
-        let client_text = field_at(fields, self.client)?;
-        let tx_text = field_at(fields, self.tx)?;
-        let amount_text = field_at(fields, self.amount)?;
-        let kind = match kind_text.to_ascii_lowercase().as_str() {
-            "deposit" => RowKind::Deposit { amount: Money::parse(amount_text)? },
-            "withdrawal" => RowKind::Withdrawal { amount: Money::parse(amount_text)? },
-            "dispute" | "resolve" | "chargeback" => no_amount_kind(kind_text, amount_text)?,
-            _ => return Err(RowError::UnknownType),
-        };
+        let kind_text = field_at(record, self.kind)?;
+        let client_text = field_at(record, self.client)?;
+        let tx_text = field_at(record, self.tx)?;
+        let amount_text = field_at(record, self.amount)?;
+        let kind = kind_of(kind_text, amount_text)?;
         let client = parse_client(client_text)?;
         let tx = parse_tx(tx_text)?;
         Ok(Row { kind, client, tx })
     }
 }
 
-fn field_at(fields: &[Vec<u8>], index: usize) -> Result<&str, RowError> {
-    let raw = match fields.get(index) {
-        Some(bytes) => bytes,
-        None => return Err(RowError::Malformed),
+fn kind_of(kind_text: &str, amount_text: &str) -> Result<RowKind, RowError> {
+    if kind_text.eq_ignore_ascii_case("deposit") {
+        return Ok(RowKind::Deposit { amount: Money::parse(amount_text)? });
+    }
+    if kind_text.eq_ignore_ascii_case("withdrawal") {
+        return Ok(RowKind::Withdrawal { amount: Money::parse(amount_text)? });
+    }
+    if kind_text.eq_ignore_ascii_case("dispute") {
+        return no_amount_kind(RowKind::Dispute, amount_text);
+    }
+    if kind_text.eq_ignore_ascii_case("resolve") {
+        return no_amount_kind(RowKind::Resolve, amount_text);
+    }
+    if kind_text.eq_ignore_ascii_case("chargeback") {
+        return no_amount_kind(RowKind::Chargeback, amount_text);
+    }
+    Err(RowError::UnknownType)
+}
+
+fn field_at(record: &Record, index: usize) -> Result<&str, RowError> {
+    let raw = match record.field(index) {
+        Ok(bytes) => bytes,
+        Err(FieldError::OutOfRange) => return Err(RowError::Malformed),
     };
     let text = match std::str::from_utf8(raw) {
         Ok(text) => text,
@@ -59,16 +74,11 @@ fn field_at(fields: &[Vec<u8>], index: usize) -> Result<&str, RowError> {
     Ok(text.trim())
 }
 
-fn no_amount_kind(kind_text: &str, amount_text: &str) -> Result<RowKind, RowError> {
+fn no_amount_kind(kind: RowKind, amount_text: &str) -> Result<RowKind, RowError> {
     if !amount_text.is_empty() {
         return Err(RowError::Malformed);
     }
-    match kind_text.to_ascii_lowercase().as_str() {
-        "dispute" => Ok(RowKind::Dispute),
-        "resolve" => Ok(RowKind::Resolve),
-        "chargeback" => Ok(RowKind::Chargeback),
-        _ => Err(RowError::UnknownType),
-    }
+    Ok(kind)
 }
 
 fn parse_client(text: &str) -> Result<ClientId, RowError> {

@@ -5,4 +5,5 @@ pub mod ledger;
 pub mod money;
 pub mod record;
 pub mod row;
+pub mod scan;
 pub mod transaction;
