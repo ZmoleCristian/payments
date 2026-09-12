@@ -54,8 +54,11 @@ append only, never renumber. [d] = decided, [o] = open.
 
 ## Scale & Output
 
-38. The transactions map grows O(#rows) — only chargebacked txs are safely evictable (locked account, dead row); everything else must stay because a dispute can arrive at any time. [d]
+38. The transactions map grows O(#rows) and NOTHING is evictable — a dispute can arrive at any time (kept txs), and chargebacked ids stay as burned tombstones so reuse is still DuplicateTx (see 43). [d]
 39. HashMap iteration order is random per run — sort clients before render so output is deterministic for diffing (spec permits any order; determinism is free at ≤65536 clients). [d]
 40. A line with no newline inside the buffer cap must not grow memory forever — cap (config.rs), drain to the next newline, report Malformed, continue. [d]
 41. Output header is always emitted, columns in spec order, locked as lowercase true/false, money at 4dp — spacing looseness is the grader's gift, not a license. [d]
 42. TASK.md hints these CSVs may arrive over thousands of concurrent TCP streams — the engine therefore speaks only `impl BufRead`/`impl Write`, never File or TcpStream; the caller owns the transport and concurrency, the engine owns none of it. [d]
+43. A chargebacked tx id is burned forever — the record stays as a tombstone (burned=true) so any later deposit/withdrawal reusing the id is DuplicateTx, and any dispute/resolve/chargeback naming it is UnknownTx. Evicting it would reopen the id to reuse exactly where fraud cleanup happened. [d]
+44. Any well-formed row (one that parses) names its client — the account is created on sight, so a rejected duplicate deposit or a failed withdrawal still yields a zero row in the output. A malformed row names nobody. [d]
+45. Locked is absolute: every later row for the account is AccountLocked, including resolve/chargeback on disputes still open at lock time — their held funds stay held forever, by design. A locked account may thus report held > 0 with no exit path. [d]

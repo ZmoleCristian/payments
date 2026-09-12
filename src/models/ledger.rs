@@ -17,6 +17,7 @@ impl Ledger {
     }
 
     pub fn apply(&mut self, row: &Row) -> Result<(), RowError> {
+        self.account_for(row.client);
         self.gate_locked(row.client)?;
         match row.kind {
             RowKind::Deposit { amount } => self.deposit(row.client, row.tx, amount),
@@ -47,7 +48,7 @@ impl Ledger {
     fn own_tx(&self, client: ClientId, tx: TxId) -> Result<&Transaction, RowError> {
         match self.transactions.get(&tx) {
             Some(record) => {
-                if record.client == client {
+                if record.client == client && !record.burned {
                     Ok(record)
                 } else {
                     Err(RowError::UnknownTx)
@@ -70,6 +71,7 @@ impl Ledger {
                 kind: TxKind::Deposit,
                 amount,
                 disputed: false,
+                burned: false,
             },
         );
         Ok(())
@@ -91,6 +93,7 @@ impl Ledger {
                 kind: TxKind::Withdrawal,
                 amount,
                 disputed: false,
+                burned: false,
             },
         );
         Ok(())
@@ -154,7 +157,13 @@ impl Ledger {
             }
         }
         account.locked = true;
-        self.transactions.remove(&tx);
+        match self.transactions.get_mut(&tx) {
+            Some(record) => {
+                record.disputed = false;
+                record.burned = true;
+            }
+            None => return Err(RowError::UnknownTx),
+        }
         Ok(())
     }
 }

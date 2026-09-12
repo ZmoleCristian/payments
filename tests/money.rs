@@ -15,6 +15,14 @@ fn wcgw3_rejects_overflowing_amount() {
 }
 
 #[test]
+fn wcgw3_fourteen_whole_digits_parse_fifteen_overflow() {
+    let o = drive("type,client,tx,amount\ndeposit,1,1,99999999999999.9999\ndeposit,2,2,999999999999999.9999\n").expect("run");
+    assert_eq!(row_for(&o.stdout, 1), "1,99999999999999.9999,0.0000,99999999999999.9999,false", "14 digits fit in scaled i64");
+    assert!(o.stderr.contains("line 3: invalid amount"), "15 nines overflow scaled i64: {}", o.stderr);
+    assert!(!o.stdout.lines().any(|l| l.starts_with("2,")), "unrepresentable amount is malformed-class: no client row");
+}
+
+#[test]
 fn wcgw4_rejects_signed_amount() {
     let o = drive("type,client,tx,amount\ndeposit,1,1,-5.0\n").expect("run");
     assert!(o.stderr.contains("line 2: invalid amount"), "stderr: {}", o.stderr);

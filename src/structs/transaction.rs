@@ -12,4 +12,5 @@ pub struct Transaction {
     pub kind: TxKind,
     pub amount: Money,
     pub disputed: bool,
+    pub burned: bool,
 }
