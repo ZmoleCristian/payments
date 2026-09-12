@@ -1,0 +1,61 @@
+use std::error::Error;
+use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::io;
+
+#[derive(Debug)]
+pub enum RowError {
+    Malformed,
+    UnknownType,
+    BadClient,
+    BadTx,
+    BadAmount,
+    DuplicateTx,
+    UnknownTx,
+    NotDisputed,
+    AlreadyDisputed,
+    InsufficientFunds,
+    AccountLocked,
+}
+
+#[derive(Debug)]
+pub enum FatalError {
+    Io(io::Error),
+    Report(io::Error),
+}
+
+impl Display for RowError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            RowError::Malformed => write!(f, "malformed row"),
+            RowError::UnknownType => write!(f, "unknown transaction type"),
+            RowError::BadClient => write!(f, "invalid client id"),
+            RowError::BadTx => write!(f, "invalid transaction id"),
+            RowError::BadAmount => write!(f, "invalid amount"),
+            RowError::DuplicateTx => write!(f, "duplicate transaction id"),
+            RowError::UnknownTx => write!(f, "unknown transaction id"),
+            RowError::NotDisputed => write!(f, "transaction not under dispute"),
+            RowError::AlreadyDisputed => write!(f, "transaction already under dispute"),
+            RowError::InsufficientFunds => write!(f, "insufficient funds"),
+            RowError::AccountLocked => write!(f, "account locked"),
+        }
+    }
+}
+
+impl Error for RowError {}
+
+impl Display for FatalError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            FatalError::Io(e) => write!(f, "io failure: {e}"),
+            FatalError::Report(e) => write!(f, "report sink failure: {e}"),
+        }
+    }
+}
+
+impl Error for FatalError {}
+
+impl From<io::Error> for FatalError {
+    fn from(e: io::Error) -> Self {
+        FatalError::Io(e)
+    }
+}

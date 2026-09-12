@@ -1,0 +1,8 @@
+fn_params_layout = "Tall"
+max_width = 220
+reorder_imports = true
+tab_spaces = 4
+hard_tabs = false
+newline_style = "Unix"
+merge_derives = true
+style_edition = "2021"

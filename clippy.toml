@@ -1,0 +1,7 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+disallowed-types = [
+  { path = "f32", reason = "money is fixed point" },
+  { path = "f64", reason = "money is fixed point" },
+]
