@@ -19,7 +19,7 @@ proptest and allocation-counter are dev-dependencies.
 ```
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
-cargo test                 # 104 tests
+cargo test                 # 106 tests
 ```
 
 ## Calls the spec does not make
@@ -73,7 +73,9 @@ in WCGW.md, and pinned by the named test.
 Records stream through one reused byte buffer; the row path allocates nothing
 per row. Only the ledger maps grow, which disputes require (#38). The engine
 speaks `impl BufRead` / `impl Write` and never names `File` or `TcpStream`, so
-the caller owns transport and concurrency (#42).
+the caller owns transport and concurrency (#42). `tests/transport.rs` drives the
+same pipeline from a socket in 1-byte writes and gets a byte-identical ledger:
+a record split across reads is still one record.
 
 ## What it knowingly does not do
 
